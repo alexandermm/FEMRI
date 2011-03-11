@@ -10,6 +10,7 @@ SET(FEMRI_NUMERIC_SRCS
   vtkfemriOptimalQuadratureOrderCalculator.cxx
   femriIntegrationDesignCurve.cxx
   femriIntegrationDesignCurveInterpolator.cxx
+  vtkfemriPolyDataQuadTriKSpaceGenerator.cxx
   )
 
 SET(FEMRI_NUMERIC_TEST_SRCS

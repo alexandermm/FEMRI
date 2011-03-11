@@ -31,9 +31,6 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         self.Surface = None
         
         self.MagnetizationValue = 1.0
-
-        self.UseExactAlgorithm = True
-
         self.QuadratureOrder = 1
         self.NumberOfSubdivisions = 0
         self.UseOptimalAlgorithm = 0
@@ -43,7 +40,6 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         self.SetInputMembers([
             ['Surface','i','vtkPolyData',1,'','','vmtksurfacereader'],
             ['MagnetizationValue','magnetizationvalue','float',1],
-            ['UseExactAlgorithm','useexact','bool',1],
             ['QuadratureOrder','qorder','int',1,'(0,)'],
             ['UseOptimalAlgorithm','useoptimal','bool',1],
             ['ErrorThreshold','error','float',1,'(0.0,)']
@@ -51,8 +47,8 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         self.SetOutputMembers([
             ])
 
-    def AcquireKSpaceExact(self,surface,origin,spacing):
-        kSpaceAcquisition = femrinumeric.vtkfemriPolyDataExactKSpaceGenerator()
+    def AcquireKSpaceQuadTri(self,surface,origin,spacing):
+        kSpaceAcquisition = femrinumeric.vtkfemriPolyDataQuadTriKSpaceGenerator()
         kSpaceAcquisition.SetInput(self.Surface)
         kSpaceAcquisition.SetKSpaceDimensionality(self.KSpaceDimensionality)
         kSpaceAcquisition.SetMatrix(self.MatrixSize)
@@ -63,21 +59,6 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         kSpaceAcquisition.Update()
 
         return kSpaceAcquisition.GetOutput()
-
-    def AcquireKSpaceNumeric(self,surface,origin,spacing):
-        
-        kSpaceAcquisition = femrinumeric.vtkfemriPolyDataNumericKSpaceGenerator()
-        kSpaceAcquisition.SetInput(self.Surface)
-        kSpaceAcquisition.SetKSpaceDimensionality(self.KSpaceDimensionality)
-        kSpaceAcquisition.SetMatrix(self.MatrixSize)
-        kSpaceAcquisition.SetFOV(self.FOV)
-        kSpaceAcquisition.SetOrigin(origin)
-        kSpaceAcquisition.SetQuadratureOrder(self.QuadratureOrder)
-        kSpaceAcquisition.SetAcquireSymmetricKSpace(self.AcquireSymmetricKSpace)
-        kSpaceAcquisition.SetMagnetizationValue(self.MagnetizationValue)
-        kSpaceAcquisition.SetUseOptimalAlgorithm(self.UseOptimalAlgorithm)
-        kSpaceAcquisition.SetErrorThreshold(self.ErrorThreshold)
-        kSpaceAcquisition.Update()
 
         self.PrintLog("Max quadrature order used: %d" % kSpaceAcquisition.GetMaximumQuadratureOrderUsed())
         self.PrintLog("No. of Gauss point evaluations: %d" % kSpaceAcquisition.GetNumberOfGaussPointEvaluations())
@@ -101,12 +82,11 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
                    self.FOV[1] / self.MatrixSize[1],
                    self.FOV[2] / self.MatrixSize[2]]
 
-        if self.UseExactAlgorithm:
-            acquiredKSpace = self.AcquireKSpaceExact(self.Surface,origin,spacing)
-        else:
-            acquiredKSpace = self.AcquireKSpaceNumeric(self.Surface,origin,spacing)
-
-        self.KSpace = self.ComputeKSpaceOperation(acquiredKSpace)
+		
+		acquiredKSpace = self.AcquireKSpaceQuadTri(self.Surface,origin,spacing)
+        
+		
+		self.KSpace = self.ComputeKSpaceOperation(acquiredKSpace)
 
 if __name__=='__main__':
     main = pypes.pypeMain()
