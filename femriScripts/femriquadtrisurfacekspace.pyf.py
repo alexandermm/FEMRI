@@ -31,9 +31,6 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         self.Surface = None
         
         self.MagnetizationValue = 1.0
-
-        self.UseExactAlgorithm = True
-
         self.QuadratureOrder = 1
         self.NumberOfSubdivisions = 0
         self.UseOptimalAlgorithm = 0
@@ -43,7 +40,6 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
         self.SetInputMembers([
             ['Surface','i','vtkPolyData',1,'','','vmtksurfacereader'],
             ['MagnetizationValue','magnetizationvalue','float',1],
-            ['UseExactAlgorithm','useexact','bool',1],
             ['QuadratureOrder','qorder','int',1,'(0,)'],
             ['UseOptimalAlgorithm','useoptimal','bool',1],
             ['ErrorThreshold','error','float',1,'(0.0,)']
@@ -52,18 +48,21 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
             ])
 
     def AcquireKSpaceQuadTri(self,surface,origin,spacing):
-        kSpaceAcquisition = femrinumeric.vtkfemriUnstructuredGridQuadTriKSpaceGenerator()
+        kSpaceAcquisition = femrinumeric.vtkfemriPolyDataQuadTriKSpaceGenerator()
         kSpaceAcquisition.SetInput(self.Surface)
         kSpaceAcquisition.SetKSpaceDimensionality(self.KSpaceDimensionality)
         kSpaceAcquisition.SetMatrix(self.MatrixSize)
         kSpaceAcquisition.SetFOV(self.FOV)
         kSpaceAcquisition.SetOrigin(origin)
-	kSpaceAcquisition.SetQuadratureOrder(self.QuadratureOrder)
-	kSpaceAcquisition.SetAcquireSymmetricKSpace(self.AcquireSymmetricKSpace)
+        kSpaceAcquisition.SetAcquireSymmetricKSpace(self.AcquireSymmetricKSpace)
         kSpaceAcquisition.SetMagnetizationValue(self.MagnetizationValue)
         kSpaceAcquisition.Update()
 
+        return kSpaceAcquisition.GetOutput()
 
+        self.PrintLog("Max quadrature order used: %d" % kSpaceAcquisition.GetMaximumQuadratureOrderUsed())
+        self.PrintLog("No. of Gauss point evaluations: %d" % kSpaceAcquisition.GetNumberOfGaussPointEvaluations())
+        self.PrintLog("Avg no. of Gauss point evaluations per kSpace location: %d" % (kSpaceAcquisition.GetNumberOfGaussPointEvaluations()/kSpaceAcquisition.GetOutput().GetNumberOfPoints()))
 
         return kSpaceAcquisition.GetOutput()
         
@@ -83,9 +82,11 @@ class femriQuadTriSurfaceKSpace(femrikspace.femriKSpace):
                    self.FOV[1] / self.MatrixSize[1],
                    self.FOV[2] / self.MatrixSize[2]]
 
-	acquiredKSpace = self.AcquireKSpaceQuadTri(self.Surface,origin,spacing)
-
-        self.KSpace = self.ComputeKSpaceOperation(acquiredKSpace)
+		
+		acquiredKSpace = self.AcquireKSpaceQuadTri(self.Surface,origin,spacing)
+        
+		
+		self.KSpace = self.ComputeKSpaceOperation(acquiredKSpace)
 
 if __name__=='__main__':
     main = pypes.pypeMain()

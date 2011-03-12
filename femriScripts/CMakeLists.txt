@@ -14,7 +14,7 @@ SET(SCRIPTS_SRCS
   femrikspacezeropadding.py
   femriimagetokspace.py
   femrinumericmeshkspace.py
-  femrinumericsurfacekspace.py
+  #femrinumericsurfacekspace.py
   femrisymbolicmeshkspace.py
   femrithicknessmeasurement.py
   femriquadtrisurfacekspace.py

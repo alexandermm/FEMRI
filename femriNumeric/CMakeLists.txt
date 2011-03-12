@@ -4,13 +4,13 @@ SET(FEMRI_NUMERIC_SRCS
 #  vtkSubdivideSelectTetra.cxx
 #  vtkSubdivideSelectQuadraticTetra.cxx
   vtkfemriUnstructuredGridNumericKSpaceGenerator.cxx
-  vtkfemriPolyDataExactKSpaceGenerator.cxx
+  #vtkfemriPolyDataExactKSpaceGenerator.cxx
   vtkfemriPolyDataNumericKSpaceGenerator.cxx
   vtkfemriGaussQuadrature.cxx
   vtkfemriOptimalQuadratureOrderCalculator.cxx
   femriIntegrationDesignCurve.cxx
   femriIntegrationDesignCurveInterpolator.cxx
-  vtkfemriPolyDataQuadTriKSpaceGenerator.cxx
+  vtkfemriUnstructuredGridQuadTriKSpaceGenerator.cxx
   )
 
 SET(FEMRI_NUMERIC_TEST_SRCS
