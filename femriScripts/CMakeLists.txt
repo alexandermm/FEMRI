@@ -17,7 +17,7 @@ SET(SCRIPTS_SRCS
   #femrinumericsurfacekspace.py
   femrisymbolicmeshkspace.py
   femrithicknessmeasurement.py
-  femriquadtrisurfacekspace.py
+  femriquadtrimeshkspace.py
   )
 
 SET(MODULE_SRCS

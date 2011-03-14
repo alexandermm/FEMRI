@@ -47,48 +47,11 @@ public:
   vtkSetMacro(QuadratureOrder,int);
   vtkGetMacro(QuadratureOrder,int);
 
-  vtkSetMacro(NumberOfSubdivisions,int);
-  vtkGetMacro(NumberOfSubdivisions,int);
-
-  vtkSetMacro(UseOptimalAlgorithm,int);
-  vtkGetMacro(UseOptimalAlgorithm,int);  
-  vtkBooleanMacro(UseOptimalAlgorithm,int);
-  
-  vtkSetMacro(ErrorThreshold,double);
-  vtkGetMacro(ErrorThreshold,double); 
-
-  vtkSetMacro(UniformMagnetization,int);
-  vtkGetMacro(UniformMagnetization,int);  
-  vtkBooleanMacro(UniformMagnetization,int);
-
   vtkSetMacro(MagnetizationValue,double);
   vtkGetMacro(MagnetizationValue,double);  
 
-  vtkSetStringMacro(MagnetizationArrayName);
-  vtkGetStringMacro(MagnetizationArrayName);
-
   vtkGetMacro(NumberOfGaussPointEvaluations,int);
-  vtkGetMacro(MaximumQuadratureOrderUsed,int);
-
-  vtkSetMacro(SliceSelection,int);
-  vtkGetMacro(SliceSelection,int);  
-  vtkBooleanMacro(SliceSelection,int);
-
-  vtkSetMacro(SliceProfile,int);
-  vtkGetMacro(SliceProfile,int);
-  /*void SetSliceProfileToIdeal()
-  { this->SliceProfile = FEMRI_IDEAL_SLICE_PROFILE; }
-  void SetSliceProfileToTrapezoidal()
-  { this->SliceProfile = FEMRI_TRAPEZOIDAL_SLICE_PROFILE; }
-  void SetSliceProfileToQuadratic()
-  { this->SliceProfile = FEMRI_QUADRATIC_SLICE_PROFILE; }*/
-
-  vtkSetMacro(SliceThickness,double);
-  vtkGetMacro(SliceThickness,double);
-
-  vtkSetMacro(SliceOrigin,double);
-  vtkGetMacro(SliceOrigin,double);
-
+ 
   virtual void Initialize();
 
   virtual void EvaluateFourierFunction(double frequency[3], double value[2]);
@@ -99,9 +62,6 @@ protected:
   
   virtual int FillInputPortInformation(int, vtkInformation*);
 
-//  int ComputeOptimalOrder(vtkCell* cell, double frequency[3]);
-//  double ComputeCyclesPerElement(vtkCell* cell, double frequency[3]);
-
   virtual double ComputeVolume()
   {
     return 1.0;
@@ -109,45 +69,15 @@ protected:
 
   double ComputeJacobian(vtkCell* cell, double pcoords[3]);
   
-  //double TrapezoidalSliceProfile(double z); 
-  //double IdealSliceProfile(double z); 
-  //double QuadraticSliceProfile(double z); 
-
-  int UseOptimalAlgorithm;
-  double ErrorThreshold;
-
   int QuadratureOrder;
-  int NumberOfSubdivisions;
-
-  int SliceSelection;
-  int SliceProfile;
-  double SliceThickness; 
-  double SliceOrigin;
-
-  int UniformMagnetization;
   double MagnetizationValue;
-  char* MagnetizationArrayName;
-
   int NumberOfGaussPointEvaluations;
-  int MaximumQuadratureOrderUsed;
-
-//BTX
-  /*enum
-  {
-    FEMRI_IDEAL_SLICE_PROFILE,
-    FEMRI_TRAPEZOIDAL_SLICE_PROFILE,
-    FEMRI_QUADRATIC_SLICE_PROFILE
-  };*/
-//ETX
-  
-//  int InitDesignCurves(void);
-//  femriIntegrationDesignCurveInterpolator *designCurves;
-
-  vtkfemriOptimalQuadratureOrderCalculator* OptimalQuadratureOrderCalculator;
-  
-private:
-  vtkfemriUnstructuredGridQuadTriKSpaceGenerator(const vtkfemriUnstructuredGridQuadTriKSpaceGenerator&);  // Not implemented.
-  void operator=(const vtkfemriUnstructuredGridQuadTriKSpaceGenerator&);  // Not implemented.
+ 
+ private:
+  // Not implemented
+  vtkfemriUnstructuredGridQuadTriKSpaceGenerator(const vtkfemriUnstructuredGridQuadTriKSpaceGenerator&);
+  // Not implemented
+  void operator=(const vtkfemriUnstructuredGridQuadTriKSpaceGenerator&);
 };
 
 #endif

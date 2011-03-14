@@ -20,68 +20,26 @@
 =========================================================================*/
 
 #include "vtkfemriUnstructuredGridQuadTriKSpaceGenerator.h"
-#include "vtkfemriOptimalQuadratureOrderCalculator.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkCell.h"
-#include "vtkPointData.h"
 #include "vtkMath.h"
 #include "vtkInformation.h"
 #include "vtkObjectFactory.h"
 #include "vtkfemriGaussQuadrature.h"
-#include "vtkHexahedron.h"
-#include "vtkQuadraticHexahedron.h"
 #include "vtkQuadraticTriangle.h"
-#include "vtkWedge.h"
-#include "vtkQuadraticWedge.h"
-#if VTK_MAJOR_VERSION > 5 || (VTK_MAJOR_VERSION == 5 && VTK_MINOR_VERSION > 0)
-#include "vtkBiQuadraticQuadraticWedge.h"
-#endif
-#include "vtkTetra.h"
-#include "vtkQuadraticTetra.h"
 
 vtkStandardNewMacro(vtkfemriUnstructuredGridQuadTriKSpaceGenerator);
 vtkCxxRevisionMacro(vtkfemriUnstructuredGridQuadTriKSpaceGenerator, "$Revision: 1.13 $");
 
 vtkfemriUnstructuredGridQuadTriKSpaceGenerator::vtkfemriUnstructuredGridQuadTriKSpaceGenerator()
 {
-  this->OptimalQuadratureOrderCalculator = NULL;
-
-  this->UseOptimalAlgorithm = 1;
-  this->ErrorThreshold = 1E-4;
-
-  this->NumberOfSubdivisions = 0;
-  this->QuadratureOrder = 4;
-
-  this->SliceSelection = 0;
-  this->SliceThickness = 1.0;
-  this->SliceOrigin = 1.0;
-  this->SliceProfile = 1.0;
-
-  this->UniformMagnetization = 1;
   this->MagnetizationValue = 1.0;
-  this->MagnetizationArrayName = NULL;
-
-  this->NumberOfGaussPointEvaluations = 0;
-  this->MaximumQuadratureOrderUsed = 0;
-
-  // Initialize default design curves and interpolator object
-//  this->InitDesignCurves();  
 
   this->SetNumberOfInputPorts(1);
 }
 
 vtkfemriUnstructuredGridQuadTriKSpaceGenerator::~vtkfemriUnstructuredGridQuadTriKSpaceGenerator()
 {
-  if (this->MagnetizationArrayName)
-    {
-    delete[] this->MagnetizationArrayName;
-    this->MagnetizationArrayName = NULL;
-    }
-  if (this->OptimalQuadratureOrderCalculator)
-    {
-    this->OptimalQuadratureOrderCalculator->Delete();
-    this->OptimalQuadratureOrderCalculator = NULL;
-    }
 }
 
 int vtkfemriUnstructuredGridQuadTriKSpaceGenerator::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
@@ -95,7 +53,8 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::Initialize()
 }
 
 //Evaluate fourier transform at given k space values
-void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(double frequency[3], double value[2])
+void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(double frequency[3], 
+double value[2])
 {
   //Get information for all vtk cells (elements)
   vtkUnstructuredGrid* input = vtkUnstructuredGrid::SafeDownCast(this->GetInput());
@@ -109,6 +68,7 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(dou
 
   //Loop to get signal for each element 
   int numberOfCells = input->GetNumberOfCells();
+  //cout << numberOfCells << endl;
   int i;
   for (i=0; i<numberOfCells; i++)
     {
@@ -132,11 +92,10 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(dou
  
     double twoPi = 2.0 * vtkMath::Pi();
     int subId = 0;
-    double quadraturePCoords[3], quadraturePoint[3];
+    double localQuadPoint[3], globalQuadPoint[3];
     double quadratureWeight;
     double* weights = new double[numberOfCellPoints];
-	//double* derivs = new double[2*numberOfCellPoints];
-	double derivs[12];
+	double* derivs = new double[2*numberOfCellPoints];
     int numberOfQuadraturePoints = 0;
     bool preComputedQuadratureRule = false;
 	
@@ -149,22 +108,21 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(dou
 	  //Get quadrature point and weight
       if (!preComputedQuadratureRule)
         {
-        gaussQuadrature->GetQuadraturePoint(q,quadraturePCoords);
+        gaussQuadrature->GetQuadraturePoint(q,localQuadPoint);
         quadratureWeight = gaussQuadrature->GetQuadratureWeight(q);
         }
 	  
-	  //Calculate quadraturePoint (the quadrature point in global coordinates)
-      cell->EvaluateLocation(subId,quadraturePCoords,quadraturePoint,weights);
+	  //Calculate globalQuadPoint (the quadrature point in global coordinates)
+      cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
 	  
 	  //Calculate normal at local quadrature point
-	  double Repsilon[3];
-	  double Reta[3];
+	  double Repsilon[3] = {0.0, 0.0, 0.0};
+	  double Reta[3]     = {0.0, 0.0, 0.0};
 	  double normal[3];
 	  
 	  //Get shape function derivatives at local quadrature point 
 	  //First part of derivs is delN/delEpsilon, second part delN/delEta
-	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(quadraturePCoords,derivs);
-	  //vtkQuadraticTriangle::InterpolationDerivs(quadraturePCoords,derivs);
+	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
 	  
 	  //Compute Repsilon, Reta and the normal
 	  double x[3];
@@ -180,17 +138,18 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(dou
 	  }
 	  vtkMath::Cross(Repsilon,Reta,normal);
 	  vtkMath::Normalize(normal);
-	  
+	  	  
 	  //Calculate the coordinate transformation jacobian	
-      double jacobian = this->ComputeJacobian(cell,quadraturePCoords);
+      double jacobian = this->ComputeJacobian(cell,localQuadPoint);
 		
-      double kdotx = vtkMath::Dot(quadraturePoint,frequency);
+      double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
       double kdotn = vtkMath::Dot(normal,frequency);
       double twoPik2 = twoPi*(frequency[0]*frequency[0]+frequency[1]*frequency[1]+frequency[2]*frequency[2]);
 
       if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
         {
-        value[0] += this->MagnetizationValue * jacobian * quadratureWeight * normal[2] * quadraturePoint[2];
+        value[0] += this->MagnetizationValue * jacobian * quadratureWeight * 
+		(normal[0]*globalQuadPoint[0] + normal[1]*globalQuadPoint[1] + normal[2]*globalQuadPoint[2])/3.0;
         value[1] += 0.0;
         }
       else
@@ -201,10 +160,9 @@ void vtkfemriUnstructuredGridQuadTriKSpaceGenerator::EvaluateFourierFunction(dou
 		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
         }
       }
-
-    //this->NumberOfGaussPointEvaluations += numberOfQuadraturePoints;
-    delete[] weights;
-	//delete[] derivs;
+	//Delete any dynamically allocated arrays 
+	delete[] weights;
+	delete[] derivs;
     }
 
   gaussQuadrature->Delete();
