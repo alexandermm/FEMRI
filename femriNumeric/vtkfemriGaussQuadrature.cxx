@@ -2657,6 +2657,9 @@ void vtkfemriGaussQuadrature::TensorProductTriangle(vtkfemriGaussQuadrature* gau
   double weight;
   int id;
   int i, j;
+  
+  // This loop computes the so called conical product rule for the standard triangle [0,0 1,0 0,1]
+  // See also the code in LibMesh's src/quadrature/quadrature_conical.C
   for (j=0; j<numberOf1DQuadraturePoints; j++)
   {
     for (i=0; i<numberOf1DQuadraturePoints; i++)

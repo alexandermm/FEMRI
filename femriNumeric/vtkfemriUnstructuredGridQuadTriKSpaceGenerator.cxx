@@ -92,7 +92,7 @@ double value[2])
  
     double twoPi = 2.0 * vtkMath::Pi();
     int subId = 0;
-    double localQuadPoint[3], globalQuadPoint[3];
+    double localQuadPoint[2], globalQuadPoint[3];
     double quadratureWeight;
     double* weights = new double[numberOfCellPoints];
 	double* derivs = new double[2*numberOfCellPoints];
@@ -101,6 +101,19 @@ double value[2])
 	
 	//Loop to go though all quadrature points
 	numberOfQuadraturePoints = gaussQuadrature->GetNumberOfQuadraturePoints();
+	
+	//PRINT OUT ALL QUADRATURE POINTS AND WEIGHTS
+	/*if (i == 0)
+	{
+		for (int holder = 0; holder < numberOfQuadraturePoints; holder++)
+		{
+			gaussQuadrature->GetQuadraturePoint(holder,localQuadPoint);
+			cout << localQuadPoint[0] << " " << localQuadPoint[1] << " " <<
+					gaussQuadrature->GetQuadratureWeight(holder) << endl;
+		}
+		cout << endl;
+	}*/
+	
     int q, j, k;
     for (q=0; q<numberOfQuadraturePoints; q++)
       {
@@ -122,8 +135,15 @@ double value[2])
 	  
 	  //Get shape function derivatives at local quadrature point 
 	  //First part of derivs is delN/delEpsilon, second part delN/delEta
-	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
-	  
+	  //Added error catching when using vtkQuadraticTriangle for the first time
+	  if (cell->GetCellType() == VTK_QUADRATIC_TRIANGLE)
+		vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
+	  else 
+		{
+			vtkErrorMacro("femri Error: unsupported cell type.");
+			return;
+		}
+	
 	  //Compute Repsilon, Reta and the normal
 	  double x[3];
 	  for (j=0; j<numberOfCellPoints; j++)
@@ -185,18 +205,9 @@ double vtkfemriUnstructuredGridQuadTriKSpaceGenerator::ComputeJacobian(vtkCell* 
   
   double* derivs = new double[2*numberOfCellPoints];
   
-  switch (cell->GetCellType())
-  {
-    case VTK_QUADRATIC_TRIANGLE:
-      vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(pcoords,derivs);
-      break;
-	default:
-      vtkErrorMacro("Error: unsupported cell type.");
-      return 0.0;
-  }
-
+  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(pcoords,derivs);
+  
   int i, j;
-
   double jacobianMatrixTr[2][3];
   for (i=0; i<3; i++)
   {
