@@ -11,6 +11,8 @@ SET(FEMRI_NUMERIC_SRCS
   femriIntegrationDesignCurve.cxx
   femriIntegrationDesignCurveInterpolator.cxx
   vtkfemriUnstructuredGridQuadTriKSpaceGenerator.cxx
+  vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator.cxx
+  vtkfemriGaussArbQuadrature.cxx
   )
 
 SET(FEMRI_NUMERIC_TEST_SRCS
