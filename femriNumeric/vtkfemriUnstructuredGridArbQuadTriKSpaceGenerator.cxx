@@ -20,6 +20,7 @@
 =========================================================================*/
 
 #include "vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator.h"
+#include "vtkfemriGaussArbQuadrature.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkCell.h"
 #include "vtkMath.h"
@@ -33,12 +34,18 @@ vtkCxxRevisionMacro(vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator, "$Revisio
 vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator()
 {
   this->MagnetizationValue = 1.0;
-
   this->SetNumberOfInputPorts(1);
+  
+  this->gaussQuadrature = NULL;
 }
 
 vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::~vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator()
 {
+	if (this->gaussQuadrature)
+    {
+		this->gaussQuadrature->Delete();
+		this->gaussQuadrature = NULL;
+    }
 }
 
 int vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
@@ -51,17 +58,20 @@ void vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::Initialize()
 {
 	//Declare and initialize quadrature object
 	//ASSUMING ALL CELLS ARE OF SAME TYPE
-	vtkUnstructuredGrid* input = vtkUnstructuredGrid::SafeDownCast(this->GetInput());
+	if (this->gaussQuadrature)
+    {
+		this->gaussQuadrature->Delete();
+		this->gaussQuadrature = NULL;
+    }
+	
 	this->gaussQuadrature = vtkfemriGaussArbQuadrature::New();
-	vtkCell* cell = input->GetCell(0);
 	
 	//Get same specified quadrature order for all elements
 	this->gaussQuadrature->SetOrder(this->QuadratureOrder);
-
+	
     //Generate 2D or 3D quadrature for square and triangular domains
 	//with different Gauss type rules depending on element type 
-    this->gaussQuadrature->Initialize(cell->GetCellType());
-
+    this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
 }
 
 //Evaluate fourier transform at given k space values

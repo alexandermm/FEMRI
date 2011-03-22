@@ -32,12 +32,12 @@
 #define __vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator_h
 
 #include "vtkfemriKSpaceGenerator.h"
-#include "vtkfemriGaussArbQuadrature.h"
 #include "vtkfemriNumericWin32Header.h"
 
 class vtkUnstructuredGrid;
 class vtkCell;
 class vtkfemriOptimalQuadratureOrderCalculator;
+class vtkfemriGaussArbQuadrature;
 
 class VTK_FEMRI_NUMERIC_EXPORT vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator : public vtkfemriKSpaceGenerator
 {
@@ -73,6 +73,7 @@ protected:
   int QuadratureOrder;
   double MagnetizationValue;
   int NumberOfGaussPointEvaluations;
+  
   vtkfemriGaussArbQuadrature* gaussQuadrature;
  
  private:
