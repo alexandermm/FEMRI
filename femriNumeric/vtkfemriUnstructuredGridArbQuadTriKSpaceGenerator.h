@@ -36,7 +36,6 @@
 
 class vtkUnstructuredGrid;
 class vtkCell;
-class vtkfemriOptimalQuadratureOrderCalculator;
 class vtkfemriGaussArbQuadrature;
 
 class VTK_FEMRI_NUMERIC_EXPORT vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator : public vtkfemriKSpaceGenerator

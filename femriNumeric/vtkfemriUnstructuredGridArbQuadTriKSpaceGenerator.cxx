@@ -54,23 +54,22 @@ int vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::FillInputPortInformation(
   return 1;
 }
 
+//This function is called from parent class in femriCommon/vtkfemriKSpaceGenerator.h
 void vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator::Initialize()
 {
 	//Declare and initialize quadrature object
-	//ASSUMING ALL CELLS ARE OF SAME TYPE
 	if (this->gaussQuadrature)
     {
 		this->gaussQuadrature->Delete();
 		this->gaussQuadrature = NULL;
     }
-	
 	this->gaussQuadrature = vtkfemriGaussArbQuadrature::New();
 	
 	//Get same specified quadrature order for all elements
 	this->gaussQuadrature->SetOrder(this->QuadratureOrder);
 	
-    //Generate 2D or 3D quadrature for square and triangular domains
-	//with different Gauss type rules depending on element type 
+    //Generate 2D quadrature for triangular domain
+	//ASSUMING ALL ELEMENTS ARE OF TRI6 TYPE 
     this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
 }
 
@@ -93,11 +92,13 @@ double value[2])
     {
     vtkCell* cell = input->GetCell(i);
     
-	//If dimension of element is not 2, can't apply sufrace femri algorithm 
-    if (cell->GetCellDimension() != 2)
-      {
-      continue;
-      }
+	
+	//If element is not tri6, get out of loop
+	if (cell->GetCellType() != VTK_QUADRATIC_TRIANGLE)
+	{
+		vtkErrorMacro("femri Error: unsupported cell type.");
+		break;
+	}
 	
 	    
     int numberOfCellPoints = cell->GetNumberOfPoints();
@@ -135,15 +136,8 @@ double value[2])
 	  
 	  //Get shape function derivatives at local quadrature point 
 	  //First part of derivs is delN/delEpsilon, second part delN/delEta
-	  //Added error catching when using vtkQuadraticTriangle for the first time
-	  if (cell->GetCellType() == VTK_QUADRATIC_TRIANGLE)
-		vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
-	  else 
-		{
-			vtkErrorMacro("femri Error: unsupported cell type.");
-			return;
-		}
-	
+	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
+	  	
 	  //Compute Repsilon, Reta and the normal
 	  double x[3];
 	  for (j=0; j<numberOfCellPoints; j++)
@@ -184,8 +178,6 @@ double value[2])
 	delete[] weights;
 	delete[] derivs;
     }
-
-  this->gaussQuadrature->Delete();
 }
 
 

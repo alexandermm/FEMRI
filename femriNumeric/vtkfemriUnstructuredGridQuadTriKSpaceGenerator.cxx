@@ -74,11 +74,12 @@ double value[2])
     {
     vtkCell* cell = input->GetCell(i);
     
-	//If dimension of element is not 2, can't apply sufrace femri algorithm 
-    if (cell->GetCellDimension() != 2)
-      {
-      continue;
-      }
+	//If element is not tri6, get out of loop
+	if (cell->GetCellType() != VTK_QUADRATIC_TRIANGLE)
+	{
+		vtkErrorMacro("femri Error: unsupported cell type.");
+		break;
+	}
 	
 	//Get same specified quadrature order for all elements
 	//still inside this loop since finished algorithm will be adaptive
@@ -136,14 +137,8 @@ double value[2])
 	  //Get shape function derivatives at local quadrature point 
 	  //First part of derivs is delN/delEpsilon, second part delN/delEta
 	  //Added error catching when using vtkQuadraticTriangle for the first time
-	  if (cell->GetCellType() == VTK_QUADRATIC_TRIANGLE)
-		vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
-	  else 
-		{
-			vtkErrorMacro("femri Error: unsupported cell type.");
-			return;
-		}
-	
+	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
+	  	
 	  //Compute Repsilon, Reta and the normal
 	  double x[3];
 	  for (j=0; j<numberOfCellPoints; j++)
