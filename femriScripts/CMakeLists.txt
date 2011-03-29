@@ -19,6 +19,7 @@ SET(SCRIPTS_SRCS
   femrithicknessmeasurement.py
   femriquadtrimeshkspace.py
   femriarbquadtrimeshkspace.py
+  femriarbquadtime.py
   )
 
 SET(MODULE_SRCS

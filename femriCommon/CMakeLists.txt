@@ -8,6 +8,7 @@ SET(FEMRI_COMMON_SRCS
   vtkfemri3DCylinderKSpaceGenerator.cxx
   vtkfemri3DSphereKSpaceGenerator.cxx
   vtkfemriBoundaryIntegralKSpaceGenerator.cxx
+  vtkfemriKSpaceGeneratorArbQuadTime.cxx
   )
 
 CONFIGURE_FILE(

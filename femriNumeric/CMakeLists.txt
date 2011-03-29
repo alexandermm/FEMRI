@@ -13,6 +13,7 @@ SET(FEMRI_NUMERIC_SRCS
   vtkfemriUnstructuredGridQuadTriKSpaceGenerator.cxx
   vtkfemriUnstructuredGridArbQuadTriKSpaceGenerator.cxx
   vtkfemriGaussArbQuadrature.cxx
+  vtkfemriUnstructuredGridArbQuadTime.cxx
   )
 
 SET(FEMRI_NUMERIC_TEST_SRCS
