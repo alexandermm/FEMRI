@@ -20,6 +20,7 @@ SET(SCRIPTS_SRCS
   femriquadtrimeshkspace.py
   femriarbquadtrimeshkspace.py
   femriarbquadtime.py
+  femriimagetokspacefftw.py
   )
 
 SET(MODULE_SRCS

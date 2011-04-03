@@ -9,6 +9,7 @@ SET(FEMRI_COMMON_SRCS
   vtkfemri3DSphereKSpaceGenerator.cxx
   vtkfemriBoundaryIntegralKSpaceGenerator.cxx
   vtkfemriKSpaceGeneratorArbQuadTime.cxx
+  vtkfemriImageToKSpaceFFTw.cxx
   )
 
 CONFIGURE_FILE(
