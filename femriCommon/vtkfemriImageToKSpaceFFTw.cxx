@@ -64,6 +64,8 @@ int vtkfemriImageToKSpaceFFTw::RequestData(
   outInfo->Get(vtkStreamingDemandDrivenPipeline::UPDATE_EXTENT(),updateExtent);
   output->SetExtent(updateExtent);
   output->AllocateScalars();
+  vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_DOUBLE, 2);
+
 
   vtkDoubleArray* newScalars = vtkDoubleArray::SafeDownCast(output->GetPointData()->GetScalars());
   
