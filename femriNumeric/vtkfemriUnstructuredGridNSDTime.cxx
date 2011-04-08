@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   femri
-  Module:    $RCSfile: vtkfemriUnstructuredGridArbQuadTime.cxx,v $
+  Module:    $RCSfile: vtkfemriUnstructuredGridNSDTime.cxx,v $
   Language:  C++
   Date:      $Date: 2008/11/04 15:46:07 $
   Version:   $Revision: 1.13 $
@@ -19,8 +19,8 @@
 
 =========================================================================*/
 
-#include "vtkfemriUnstructuredGridArbQuadTime.h"
-#include "vtkfemriGaussArbQuadrature.h"
+#include "vtkfemriUnstructuredGridNSDTime.h"
+#include "vtkfemriNSDQuadrature.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkCell.h"
 #include "vtkMath.h"
@@ -31,10 +31,10 @@
 //alexmbcm
 #include <ctime>
 
-vtkStandardNewMacro(vtkfemriUnstructuredGridArbQuadTime);
-vtkCxxRevisionMacro(vtkfemriUnstructuredGridArbQuadTime, "$Revision: 1.13 $");
+vtkStandardNewMacro(vtkfemriUnstructuredGridNSDTime);
+vtkCxxRevisionMacro(vtkfemriUnstructuredGridNSDTime, "$Revision: 1.13 $");
 
-vtkfemriUnstructuredGridArbQuadTime::vtkfemriUnstructuredGridArbQuadTime()
+vtkfemriUnstructuredGridNSDTime::vtkfemriUnstructuredGridNSDTime()
 {
   this->MagnetizationValue = 1.0;
   this->SetNumberOfInputPorts(1);
@@ -42,7 +42,7 @@ vtkfemriUnstructuredGridArbQuadTime::vtkfemriUnstructuredGridArbQuadTime()
   this->gaussQuadrature = NULL;
 }
 
-vtkfemriUnstructuredGridArbQuadTime::~vtkfemriUnstructuredGridArbQuadTime()
+vtkfemriUnstructuredGridNSDTime::~vtkfemriUnstructuredGridNSDTime()
 {
 	if (this->gaussQuadrature)
     {
@@ -51,33 +51,43 @@ vtkfemriUnstructuredGridArbQuadTime::~vtkfemriUnstructuredGridArbQuadTime()
     }
 }
 
-int vtkfemriUnstructuredGridArbQuadTime::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
+int vtkfemriUnstructuredGridNSDTime::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkUnstructuredGrid");
   return 1;
 }
 
 //This function is called from parent class in femriCommon/vtkfemriKSpaceGenerator.h
-void vtkfemriUnstructuredGridArbQuadTime::Initialize()
+void vtkfemriUnstructuredGridNSDTime::Initialize()
 {
-	//Declare and initialize quadrature object
-	if (this->gaussQuadrature)
+	//Declare and initialize quadrature objects
+	if (this->qLab)
     {
-		this->gaussQuadrature->Delete();
-		this->gaussQuadrature = NULL;
+		this->qLab->Delete(); this->qLab = NULL;
     }
-	this->gaussQuadrature = vtkfemriGaussArbQuadrature::New();
+	this->qLab = vtkfemriNSDQuadrature::New();
+	this->qLab->SetOrder(this->QuadratureOrder);
+   	this->qLab->Initialize(GAUSS_LAGUERRE, GAUSS_LAGUERRE);
 	
-	//Get same specified quadrature order for all elements
-	this->gaussQuadrature->SetOrder(this->QuadratureOrder);
+	if (this->qHab)
+    {
+		this->qHab->Delete(); this->qHab = NULL;
+    }
+	this->qHab = vtkfemriNSDQuadrature::New();
+	this->qHab->SetOrder(this->QuadratureOrder);
+   	this->qHab->Initialize(GAUSS_HALF_HERMITE, GAUSS_LAGUERRE);
 	
-    //Generate 2D quadrature for triangular domain
-	//ASSUMING ALL ELEMENTS ARE OF TRI6 TYPE 
-    this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
+	if (this->qGab)
+    {
+		this->qGab->Delete(); this->qGab = NULL;
+    }
+	this->qGab = vtkfemriNSDQuadrature::New();
+	this->qGab->SetOrder(this->QuadratureOrder);
+   	this->qGab->Initialize(GAUSS_LEGENDRE, GAUSS_LAGUERRE);
 }
 
 //Evaluate fourier transform at given k space values
-void vtkfemriUnstructuredGridArbQuadTime::EvaluateFourierFunction(double frequency[3], 
+void vtkfemriUnstructuredGridNSDTime::EvaluateFourierFunction(double frequency[3], 
 double value[2], ofstream& writer)
 {
   //Get information for all vtk cells (elements)
@@ -95,7 +105,7 @@ double value[2], ofstream& writer)
   for (i=0; i<numberOfCells; i++)
     {
 	
-	//alexmbc: start timer
+	//alexmbcm: start timer
 	clock_t startTime = clock();
 	
 	
@@ -114,79 +124,67 @@ double value[2], ofstream& writer)
 	    
     int numberOfCellPoints = cell->GetNumberOfPoints();
  
-    double twoPi = 2.0 * vtkMath::Pi();
-    int subId = 0;
-    double localQuadPoint[2], globalQuadPoint[3];
-    double quadratureWeight;
-    double* weights = new double[numberOfCellPoints];
-	double* derivs = new double[2*numberOfCellPoints];
-    int numberOfQuadraturePoints = 0;
-    bool preComputedQuadratureRule = false;
-	
-	//Loop to go though all quadrature points
-	numberOfQuadraturePoints = this->gaussQuadrature->GetNumberOfQuadraturePoints();
-	
+ 
+	//Get oscillator g
 	int q, j, k;
-    for (q=0; q<numberOfQuadraturePoints; q++)
-      {
-	  
-	  //Get quadrature point and weight
-      if (!preComputedQuadratureRule)
-        {
-        this->gaussQuadrature->GetQuadraturePoint(q,localQuadPoint);
-        quadratureWeight = this->gaussQuadrature->GetQuadratureWeight(q);
-        }
-	  
-	  //Calculate globalQuadPoint (the quadrature point in global coordinates)
-      cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
-	  
-	  //Calculate normal at local quadrature point
-	  double Repsilon[3] = {0.0, 0.0, 0.0};
-	  double Reta[3]     = {0.0, 0.0, 0.0};
-	  double normal[3];
-	  
-	  //Get shape function derivatives at local quadrature point 
-	  //First part of derivs is delN/delEpsilon, second part delN/delEta
-	  vtkQuadraticTriangle::SafeDownCast(cell)->InterpolationDerivs(localQuadPoint,derivs);
-	  	
-	  //Compute Repsilon, Reta and the normal
-	  double x[3];
-	  for (j=0; j<numberOfCellPoints; j++)
-	  {
-		  cell->GetPoints()->GetPoint(j,x);
-		  
-		  for (k=0; k<3; k++)
-			{
-				Repsilon[k] += x[k] * derivs[j];
-				Reta[k]     += x[k] * derivs[numberOfCellPoints+j];
-			}
-	  }
-	  vtkMath::Cross(Repsilon,Reta,normal);
-	  vtkMath::Normalize(normal);
-	  	  
-	  //Calculate the coordinate transformation jacobian	
-      double jacobian = this->ComputeJacobian(cell,localQuadPoint);
+	
+	double xs[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
+	double ys[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
+	double zs[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
+	double p[3];
+	
+	for (q=0; q<numberOfCellPoints; q++)
+	{
+		cell->GetPoints()->GetPoint(q,p);
 		
-      double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
-      double kdotn = vtkMath::Dot(normal,frequency);
-      double twoPik2 = twoPi*(frequency[0]*frequency[0]+frequency[1]*frequency[1]+frequency[2]*frequency[2]);
+		xs[q] = p[0];
+		ys[q] = p[1];
+		zs[q] = p[2];
+	}
+    
+	double twoPi = 2.0 * vtkMath::Pi();
 
-      if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
-        {
-        cellValue[0] += this->MagnetizationValue * jacobian * quadratureWeight * 
-		(normal[0]*globalQuadPoint[0] + normal[1]*globalQuadPoint[1] + normal[2]*globalQuadPoint[2])/3.0;
-        cellValue[1] += 0.0;
-        }
-      else
-        {
-        cellValue[0] += 
-		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * sin(twoPi * kdotx);
-        cellValue[1] += 
-		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
-        }
-      }
-	  
-	  
+    frequency[0] = 2.0;
+	frequency[1] = 3.0;
+	frequency[2] = 4.0;
+	
+	
+	double ga[6];
+	ga[0] = -twoPi*((2*xs[0]-4*xs[5]+2*xs[2])*frequency[0] + 
+					(2*ys[0]-4*ys[5]+2*ys[2])*frequency[1] + 
+					(2*zs[0]-4*zs[5]+2*zs[2])*frequency[2]);
+					
+	ga[1] = -twoPi*((2*xs[0]-4*xs[3]+2*xs[1])*frequency[0] + 
+	                (2*ys[0]-4*ys[3]+2*ys[1])*frequency[1] + 
+					(2*zs[0]-4*zs[3]+2*zs[1])*frequency[2]);
+					
+	ga[2] = -twoPi*((4*xs[0]-4*xs[3]+4*xs[4]-4*xs[5])*frequency[0] +
+	                (4*ys[0]-4*ys[3]+4*ys[4]-4*ys[5])*frequency[1] +
+					(4*zs[0]-4*zs[3]+4*zs[4]-4*zs[5])*frequency[2]);
+					
+	ga[3] = -twoPi*((4*xs[5]-3*xs[0]-xs[2])*frequency[0] +
+	                (4*ys[5]-3*ys[0]-ys[2])*frequency[1] +
+					(4*zs[5]-3*zs[0]-zs[2])*frequency[2]);
+					
+	ga[4] = -twoPi*((4*xs[3]-3*xs[0]-xs[1])*frequency[0] +
+	                (4*ys[3]-3*ys[0]-ys[1])*frequency[1] +
+					(4*zs[3]-3*zs[0]-zs[1])*frequency[2]);
+					
+	ga[5] = -twoPi*(xs[0]*frequency[0] + ys[0]*frequency[1] + zs[0]*frequency[2]);
+
+	
+	if (i == 9)
+	{
+		cout << endl << ga[0] << " " << ga[1] << " " << ga[2] 
+			  << " " << ga[3] << " " << ga[4] << " " << ga[5] << endl;
+	}
+	
+	
+	cellValue[0] = 0.0;
+	cellValue[1] = 0.0;
+	
+	int numberOfQuadraturePoints = 4;
+	
 	//Get time
     double theTime = (double) (clock() - startTime) / CLOCKS_PER_SEC * 1000.0;
 	
@@ -206,14 +204,14 @@ double value[2], ofstream& writer)
 	value[1] += cellValue[1];
 	
 	//Delete any dynamically allocated arrays 
-	delete[] weights;
-	delete[] derivs;
+	//delete[] weights;
+	//delete[] derivs;
     }
 }
 
 
 //Function needed for EvaluateFourierFunction
-double vtkfemriUnstructuredGridArbQuadTime::ComputeJacobian(vtkCell* cell, double pcoords[3])
+double vtkfemriUnstructuredGridNSDTime::ComputeJacobian(vtkCell* cell, double pcoords[3])
 {
   double jacobian = 0.0;
   

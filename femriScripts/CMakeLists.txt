@@ -21,6 +21,7 @@ SET(SCRIPTS_SRCS
   femriarbquadtrimeshkspace.py
   femriarbquadtime.py
   femriimagetokspacefftw.py
+  femrinsdtime.py
   )
 
 SET(MODULE_SRCS
