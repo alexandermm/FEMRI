@@ -31,6 +31,7 @@
 //alexmbcm
 #include <ctime>
 
+
 vtkStandardNewMacro(vtkfemriUnstructuredGridNSDTime);
 vtkCxxRevisionMacro(vtkfemriUnstructuredGridNSDTime, "$Revision: 1.13 $");
 
@@ -39,15 +40,24 @@ vtkfemriUnstructuredGridNSDTime::vtkfemriUnstructuredGridNSDTime()
   this->MagnetizationValue = 1.0;
   this->SetNumberOfInputPorts(1);
   
-  this->gaussQuadrature = NULL;
+  this->qLab = NULL;
+  this->qHab = NULL;
+  this->qGab = NULL;
 }
 
 vtkfemriUnstructuredGridNSDTime::~vtkfemriUnstructuredGridNSDTime()
 {
-	if (this->gaussQuadrature)
+	if (this->qLab)
     {
-		this->gaussQuadrature->Delete();
-		this->gaussQuadrature = NULL;
+		this->qLab->Delete(); this->qLab = NULL;
+    }
+	if (this->qHab)
+    {
+		this->qHab->Delete(); this->qHab = NULL;
+    }
+	if (this->qGab)
+    {
+		this->qGab->Delete(); this->qGab = NULL;
     }
 }
 
@@ -128,10 +138,12 @@ double value[2], ofstream& writer)
 	//Get oscillator g
 	int q, j, k;
 	
-	double xs[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
-	double ys[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
-	double zs[] = {0.0,0.0,0.0, 0.0,0.0,0.0};
+	double xs[6];
+	double ys[6];
+	double zs[6];
 	double p[3];
+	double a = 0.0;
+	double b = 1.0;
 	
 	for (q=0; q<numberOfCellPoints; q++)
 	{
@@ -173,29 +185,34 @@ double value[2], ofstream& writer)
 	ga[5] = -twoPi*(xs[0]*frequency[0] + ys[0]*frequency[1] + zs[0]*frequency[2]);
 
 	
-	if (i == 9)
+	
+	//Decompose integral
+	bool nsdSuccess;
+	if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
 	{
-		cout << endl << ga[0] << " " << ga[1] << " " << ga[2] 
-			  << " " << ga[3] << " " << ga[4] << " " << ga[5] << endl;
+		nsdSuccess = 0;
+		cellValue[0] = 0.0;
+		cellValue[1] = 0.0;
+	}
+	else
+	{
+		nsdSuccess = decompNSD(cell, cellValue, ga, a,b, numberOfCellPoints);
 	}
 	
-	
-	cellValue[0] = 0.0;
-	cellValue[1] = 0.0;
-	
+			
 	int numberOfQuadraturePoints = 4;
 	
 	//Get time
     double theTime = (double) (clock() - startTime) / CLOCKS_PER_SEC * 1000.0;
 	
 	//Record values for each element (cell)
-	if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
+	if (nsdSuccess)
 		{ 
-		writer << "0 0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << "0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	else
 		{
-		writer << "0 1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << "1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	
 	
@@ -264,4 +281,194 @@ double vtkfemriUnstructuredGridNSDTime::ComputeJacobian(vtkCell* cell, double pc
  
   return jacobian;
 }
+
+
+
+
+//NSD FUNCTIONS
+bool vtkfemriUnstructuredGridNSDTime::decompNSD(vtkCell* cell, double* cellValue, 
+double* ga, double a, double b, int numberOfCellPoints)
+{
+	int dirY;
+	bool nsdSuccess = 1;
+	
+	comp fVal, G1,G4;
+	
+	//Choose direction in y dimension
+	if (ga[4] < 0.0) dirY = -1; 
+	else dirY = 1;
+	
+	//Get x value of stationary point in 'y' boundaries
+	double spa = -ga[4]/ga[2];
+    double spb =  (2*ga[1]+ga[4])/(2*ga[1]-ga[2]);
+	
+	//If sp is outside [a,b], don't use it
+	if  ( ((spa < a) || (spa > b)) && ((spb < a) || (spb > b)) )
+	{
+		nsdSuccess = 1;
+		G1 = innerDecompA(cell, dirY, ga, a,b);
+        G4 = innerDecompB(cell, dirY, ga, a,b);
+		
+		fVal = G1 - G4;
+	}
+	else
+	{
+		nsdSuccess = 0;
+		//Same as fVal = complex(0.0, 0.0);
+		fVal = 0.0;
+	}
+	
+	cellValue[0] = fVal.real();
+	cellValue[1] = fVal.imag();
+	
+	return nsdSuccess;
+}
+
+//GENERAL FUNCTIONS
+inline comp fx(comp x, comp y)
+{
+	return 0.8*x*x + 0.5*y*y + 0.1*x*y + 0.7*x - 0.4*y + 0.1;
+}
+inline comp gx(comp x, comp y, double* ga)
+{
+	return ga[0]*x*x + ga[1]*y*y + ga[2]*x*y + ga[3]*x + ga[4]*y + ga[5];
+}
+
+
+//G FUNCTIONS
+inline comp  h_ay(int dir, double p, double x, double* ga)
+{
+	return ( -(ga[2]*x+ga[4]) + ((double) dir)*sqrt(pow(ga[2]*x+ga[4], 2.0) + 4.0*ga[1]*comp(0.0,1.0)*p) ) /          
+		   (2.0*ga[1]);
+}
+inline comp dh_ay(int dir, double p, double x, double *ga)
+{
+	return ((double) dir)*comp(0.0,1.0) / sqrt(pow(ga[2]*x+ga[4], 2.0) + 4.0*ga[1]*comp(0.0,1.0)*p);
+}
+
+
+//INNER DECOMPOSITIONS
+comp vtkfemriUnstructuredGridNSDTime::innerDecompA(vtkCell* cell, int dirY, double* ga, double a, double b)
+{
+	double gax[3];
+	gax[0] = ga[0];
+	gax[1] = ga[3];
+	gax[2] = ga[5]; 
+	
+	double a1 = gax[0];
+	double a2 = gax[1];
+	double sp = -a2/(2.0*a1); //Stationary point
+
+	int q;
+	
+	
+    //If oscillator can be considered nonoscillatory in interval integrate using standard quadrature
+	if ((fabs(a1) < 0.1) && (fabs(a2) < 0.1))
+	{
+		comp G = 0.0;
+		comp f;
+		comp g;
+		double quadPoint[2];
+		double quadWeight;
+		
+        int numQuadPs = this->qGab->GetNumberOfQuadraturePoints();
+		
+		for (q=0; q < numQuadPs; q++)
+		{
+			this->qGab->GetQuadraturePoint(q,quadPoint);
+			quadWeight = this->qGab->GetQuadratureWeight(q);
+
+			f = fx(quadPoint[0], h_ay(dirY, quadPoint[1], quadPoint[0],ga)    );
+			g = gx(quadPoint[0], h_ay(dirY, quadPoint[1], quadPoint[0],ga), ga);
+			
+			G = G + quadWeight*f*exp(comp(0.0,1.0)*g) * dh_ay(dirY, quadPoint[1], quadPoint[0], ga);
+		}
+		return G;
+	}
+
+	if (fabs(a1) < 100*eps) //If a1 is 0, oscillator is linear  
+    {
+		comp F1 = 0.0; 
+		comp F2 = 0.0;
+	
+		for q = 1:size(qWL,1)
+		{
+			%CALCULATE F1
+			u = hl(a, 1, qPL(q,1), a2);
+			f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+			F1 = F1 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhl(1, a2);
+
+			%CALCULATE F4
+			u = hl(b, 1, qPL(q,1), a2);
+			f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+			F2 = F2 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhl(1, a2);
+		}
+
+		G = (exp(i*polyval(gax,a ))*F1 - exp(i*polyval(gax,b ))*F2);
+    }     
+	else //If a1 is not 0, its quadratic
+	{ 
+		//Switch path direction based on direction of h on imaginary axis from real axis
+		int dir;
+		if (2.0*a*a1+a2 < 0.0) dir = -1; else dir = 1;
+    
+		if (sp < a) || (sp > b) %If sp is outside [a,b], don't use it 
+        F1=0; F4=0;
+        %decompAnoSP = 1
+        for q = 1:size(qWL,1)
+            %CALCULATE F1
+            u = hab( dir, qPL(q,1), a,a1,a2);
+            f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+            F1 = F1 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhab( dir, qPL(q,1), a,a1,a2);
+
+            %CALCULATE F4
+            u = hab( dir, qPL(q,1), b,a1,a2);
+            f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+            F4 = F4 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhab( dir, qPL(q,1), b,a1,a2);
+        end
+
+        G = (exp(i*polyval(gax,a ))*F1 - ...
+             exp(i*polyval(gax,b ))*F4);
+         
+		else %If sp is inside [a,b], calculate NSD integral with sp  
+        F1=0; F2=0; F3=0; F4=0;
+        %decompASP = 1
+        for q = 1:size(qWL,1)
+            %CALCULATE F1
+            u = hab( dir, qPL(q,1), a,a1,a2);
+            f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+            F1 = F1 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhab( dir, qPL(q,1), a,a1,a2);
+
+            %CALCULATE F2 and F3
+            u = hsp( dir, qPH(q,1), a1,a2);
+            f = fx(u, h_ay(dirY, qPH(q,2), u,ga), fa);
+            F2 = F2 + qWH(q)*f*dh_ay(dirY, qPH(q,2), u,ga)*dhsp( dir,a1);
+
+            u = hsp(-dir, qPH(q,1), a1,a2);
+            f = fx(u, h_ay(dirY, qPH(q,2), u,ga), fa);
+            F3 = F3 + qWH(q)*f*dh_ay(dirY, qPH(q,2), u,ga)*dhsp(-dir,a1);
+
+            %CALCULATE F4
+            u = hab(-dir, qPL(q,1), b,a1,a2);
+            f = fx(u, h_ay(dirY, qPL(q,2), u,ga), fa);
+            F4 = F4 + qWL(q)*f*dh_ay(dirY, qPL(q,2), u,ga)*dhab(-dir, qPL(q,1), b,a1,a2);
+        end
+
+        G = (exp(i*polyval(gax,a ))*F1 - ...
+             exp(i*polyval(gax,sp))*F2 + ...
+             exp(i*polyval(gax,sp))*F3 - ...
+             exp(i*polyval(gax,b ))*F4);
+    end
+end
+
+}
+
+comp vtkfemriUnstructuredGridNSDTime::innerDecompB(vtkCell* cell, int dirY, double* ga, double a, double b)
+{
+	return comp(1.0, 0.0);
+}
+
+
+
+
 

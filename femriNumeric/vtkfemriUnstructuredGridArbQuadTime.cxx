@@ -193,11 +193,11 @@ double value[2], ofstream& writer)
 	//Record values for each element (cell)
 	if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
 		{ 
-		writer << "0 0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << "0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	else
 		{
-		writer << "0 1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << "1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	
 	

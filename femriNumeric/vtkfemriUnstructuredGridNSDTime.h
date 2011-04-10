@@ -34,6 +34,12 @@
 #include "vtkfemriKSpaceGeneratorNSDTime.h"
 #include "vtkfemriNumericWin32Header.h"
 
+//alexmbcm
+#include <complex>
+using namespace std;
+typedef complex<double> comp;
+
+
 class vtkUnstructuredGrid;
 class vtkCell;
 class vtkfemriNSDQuadrature;
@@ -78,6 +84,13 @@ protected:
   vtkfemriNSDQuadrature* qGab;
  
  private:
+  //NSD functions
+  bool decompNSD(vtkCell* cell, double* cellValue, double* ga, 
+  double a, double b, int numberOfCellPoints);
+  comp innerDecompA(vtkCell* cell, int dirY, double* ga, double a, double b);
+  comp innerDecompB(vtkCell* cell, int dirY, double* ga, double a, double b);
+
+ 
   // Not implemented
   vtkfemriUnstructuredGridNSDTime(const vtkfemriUnstructuredGridNSDTime&);
   // Not implemented

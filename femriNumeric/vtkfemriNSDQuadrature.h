@@ -27,6 +27,12 @@
 
 #include "vtkDoubleArray.h"
 
+//Constants used in Initialize() function
+#define GAUSS_LEGENDRE     0 
+#define GAUSS_LAGUERRE     1
+#define GAUSS_HALF_HERMITE 2 
+
+
 class VTK_FEMRI_NUMERIC_EXPORT vtkfemriNSDQuadrature : public vtkObject
 {
 public:
@@ -59,29 +65,25 @@ public:
     return this->QuadratureWeights->GetValue(id);
   }
  
-  void Initialize(vtkIdType cellType);
+  void Initialize(int quadRuleName1, int quadRuleName2);
  
-  void Initialize1DGauss();
-  void Initialize1DJacobi(int alpha, int beta);
-  void ScaleTo01();
- 
+
 protected:
   vtkfemriNSDQuadrature();
   ~vtkfemriNSDQuadrature();
 
-  void TensorProductQuad(vtkfemriNSDQuadrature* q1D);
-  void TensorProductTriangle(vtkfemriNSDQuadrature* gauss1D, vtkfemriNSDQuadrature* jacA1D);
-  
-  void TensorProductHexahedron(vtkfemriNSDQuadrature* q1D);
-  void TensorProductWedge(vtkfemriNSDQuadrature* q1D, vtkfemriNSDQuadrature* q2D);
-  void TensorProductTetra(vtkfemriNSDQuadrature* gauss1D, vtkfemriNSDQuadrature* jacA1D, vtkfemriNSDQuadrature* jacB1D);
-  
+  void Initialize1DLegendre();
+  void Initialize1DLaguerre();
+  void Initialize1DHalfHermite();
+  void ScaleTo01();
+
+  void TensorProduct(vtkfemriNSDQuadrature* quadRule1, vtkfemriNSDQuadrature* quadRule2);
+    
   vtkDoubleArray* QuadraturePoints;
   vtkDoubleArray* QuadratureWeights;
  
   int Order;
   int QuadratureType;
-  vtkIdType CellType;
   int PreviousOrder;
 
 private:  
