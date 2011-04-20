@@ -129,7 +129,7 @@ int vtkfemriKSpaceGeneratorNSDTime::RequestData(
   double voxelVolume = this->ComputeVoxelVolume();
   
   //alexmbcm: open file to record timing and signal data
-  ofstream writer( "/Volumes/DATA/MRI/vmtkMRI/functiontimingapril/nsdQuadInfo.txt" );
+  ofstream writer( "/Volumes/DATA/MRI/vmtkMRI/functiontimingapril/nsdMeshInfo.txt" );
   
   if (!writer)
   { 

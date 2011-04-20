@@ -129,7 +129,7 @@ int vtkfemriKSpaceGeneratorArbQuadTime::RequestData(
   double voxelVolume = this->ComputeVoxelVolume();
   
   //alexmbcm: open file to record timing and signal data
-  ofstream writer( "/Volumes/DATA/MRI/vmtkMRI/functiontimingapril/exactQuadInfo.txt" );
+  ofstream writer( "/Volumes/DATA/MRI/vmtkMRI/functiontimingapril/quadMeshInfo.txt" );
   
   if (!writer)
   { 
