@@ -77,10 +77,10 @@ void vtkfemriUnstructuredGridArbQuadTime::Initialize()
 }
 
 //alexmbcm: function to test NSD
-inline double fx(double xi, double eta)
-{
-	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
-}
+//inline double fx(double xi, double eta)
+//{
+	//return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
+//}
 //inline double gx(double xi, double eta)
 //{
 	//return 10.76*xi*xi + 1.94*eta*eta + 9.31*xi*eta - 6.16*xi + 19.82*eta - 17.17;
@@ -207,16 +207,16 @@ double value[2], ofstream& writer)
       else
         {
 		//alexmbcm: test NSD
-		cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
-		cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
+		//cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
+		//cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
 		//cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * 
 		//cos( gx(localQuadPoint[0], localQuadPoint[1]) );
 		//cellValue[1] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) *
 		//sin( gx(localQuadPoint[0], localQuadPoint[1]) );
-        /*cellValue[0] += 
+        cellValue[0] += 
 		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * sin(twoPi * kdotx);
         cellValue[1] += 
-		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);*/
+		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
         }
 	  }
 	  

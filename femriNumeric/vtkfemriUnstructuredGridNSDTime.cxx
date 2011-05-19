@@ -114,10 +114,10 @@ void vtkfemriUnstructuredGridNSDTime::Initialize()
     this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
 }
 
-inline double fx(double xi, double eta)
+/*inline double fx(double xi, double eta)
 {
 	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
-}	
+}*/	
 	
 //Evaluate fourier transform at given k space values
 void vtkfemriUnstructuredGridNSDTime::EvaluateFourierFunction(double frequency[3], 
@@ -243,13 +243,13 @@ double value[2], ofstream& writer)
 			quadratureWeight = this->gaussQuadrature->GetQuadratureWeight(q);
 	  
 			cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
-			double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
+			//double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
 			
-			cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
-			cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
+			//cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
+			//cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
 
 				
-			/*//Calculate globalQuadPoint (the quadrature point in global coordinates)
+			//Calculate globalQuadPoint (the quadrature point in global coordinates)
 			cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
 	  
 			//Calculate normal at local quadrature point
@@ -296,11 +296,11 @@ double value[2], ofstream& writer)
 				this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * sin(twoPi * kdotx);
 				cellValue[1] += 
 				this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
-			}*/
+			}
 		}
 	}
 
-	//Get time
+	//Get time in ms
     double theTime = (double) (clock() - startTime) / CLOCKS_PER_SEC * 1000.0;
 	
 	int numberOfQuadPoints = this->qLab->GetNumberOfQuadraturePoints();
@@ -526,9 +526,9 @@ inline comp computeComplexJacobian(comp xi, comp eta, vtkCell* cell)
 
 inline comp fx(comp xi, comp eta, vtkCell* cell, double* frequency)
 {
-	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
+	//return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
 	
-	/*//Compute k dot normal
+	//Compute k dot normal
 	int numberOfCellPoints = cell->GetNumberOfPoints();
 	
 	comp derivs[12];
@@ -574,7 +574,7 @@ inline comp fx(comp xi, comp eta, vtkCell* cell, double* frequency)
 	(frequency[0]*frequency[0]+frequency[1]*frequency[1]+frequency[2]*frequency[2]);
 
 
-	return computeComplexJacobian(xi, eta, cell) * kdotn * comp(0.0,1.0) / twoPik2;*/
+	return computeComplexJacobian(xi, eta, cell) * kdotn * comp(0.0,1.0) / twoPik2;
 }
 
 inline comp gx(comp x, comp y, double* ga)
