@@ -76,12 +76,23 @@ void vtkfemriUnstructuredGridArbQuadTime::Initialize()
     this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
 }
 
+//alexmbcm: function to test NSD
+inline double fx(double xi, double eta)
+{
+	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
+}
+//inline double gx(double xi, double eta)
+//{
+	//return 10.76*xi*xi + 1.94*eta*eta + 9.31*xi*eta - 6.16*xi + 19.82*eta - 17.17;
+//}	
+
 //Evaluate fourier transform at given k space values
 void vtkfemriUnstructuredGridArbQuadTime::EvaluateFourierFunction(double frequency[3], 
 double value[2], ofstream& writer)
 {
   //Get information for all vtk cells (elements)
   vtkUnstructuredGrid* input = vtkUnstructuredGrid::SafeDownCast(this->GetInput());
+  
   
   //Complex signal real and imaginary values at the given kspace value
   value[0] = 0.0;
@@ -92,6 +103,7 @@ double value[2], ofstream& writer)
   int numberOfCells = input->GetNumberOfCells();
   
   int i;
+  //cout << endl << " Changing k-space value: " << endl;
   for (i=0; i<numberOfCells; i++)
     {
 	
@@ -111,8 +123,23 @@ double value[2], ofstream& writer)
 		break;
 	}
 	
+	
+	int numberOfCellPoints = cell->GetNumberOfPoints();
+	
+	
+	double xs[6];
+	double ys[6];
+	double zs[6];
+	double p[3];
+	for (int q=0; q<numberOfCellPoints; q++)
+	{
+		cell->GetPoints()->GetPoint(q,p);
+		
+		xs[q] = p[0];
+		ys[q] = p[1];
+		zs[q] = p[2];
+	}
 	    
-    int numberOfCellPoints = cell->GetNumberOfPoints();
  
     double twoPi = 2.0 * vtkMath::Pi();
     int subId = 0;
@@ -138,7 +165,7 @@ double value[2], ofstream& writer)
         }
 	  
 	  //Calculate globalQuadPoint (the quadrature point in global coordinates)
-      cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
+      vtkQuadraticTriangle::SafeDownCast(cell)->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
 	  
 	  //Calculate normal at local quadrature point
 	  double Repsilon[3] = {0.0, 0.0, 0.0};
@@ -179,13 +206,21 @@ double value[2], ofstream& writer)
         }
       else
         {
-        cellValue[0] += 
+		//alexmbcm: test NSD
+		cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
+		cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
+		//cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * 
+		//cos( gx(localQuadPoint[0], localQuadPoint[1]) );
+		//cellValue[1] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) *
+		//sin( gx(localQuadPoint[0], localQuadPoint[1]) );
+        /*cellValue[0] += 
 		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * sin(twoPi * kdotx);
         cellValue[1] += 
-		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
+		this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);*/
         }
-      }
+	  }
 	  
+		//cout << " Quad signal: " << setprecision(16) << " " << cellValue[0] << " " << cellValue[1] << endl;
 	  
 	//Get time
     double theTime = (double) (clock() - startTime) / CLOCKS_PER_SEC * 1000.0;

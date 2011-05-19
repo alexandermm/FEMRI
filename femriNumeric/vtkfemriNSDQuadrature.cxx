@@ -82,6 +82,9 @@ void vtkfemriNSDQuadrature::Initialize(int quadRuleName1, int quadRuleName2)
         case GAUSS_LAGUERRE:
 			quadRule1->Initialize1DLaguerre();
 			break;
+		case GAUSS_HERMITE:
+			quadRule1->Initialize1DHermite();
+			break;
         case GAUSS_HALF_HERMITE:
 			quadRule1->Initialize1DHalfHermite();
 			break;
@@ -93,6 +96,9 @@ void vtkfemriNSDQuadrature::Initialize(int quadRuleName1, int quadRuleName2)
 			break;
         case GAUSS_LAGUERRE:
 			quadRule2->Initialize1DLaguerre();
+			break;
+		case GAUSS_HERMITE:
+			quadRule2->Initialize1DHermite();
 			break;
         case GAUSS_HALF_HERMITE:
 		quadRule2->Initialize1DHalfHermite();
@@ -322,6 +328,90 @@ void vtkfemriNSDQuadrature::Initialize1DLaguerre()
 		if(i < numPs-1)
 			A[i+1][i] = A[i][i+1] = i + 1.0;
 	}
+		
+	//Find points using JacobiN function
+	double *qPoints       = new double[numPs];
+	double **eigenVectors = vtkNewMatrix(numPs,numPs);
+	vtkMath::JacobiN(A, numPs, qPoints, eigenVectors);
+		
+	//Put found points (from 0 to 1) in point array taking into account 
+	//they are ordered from positive to negative 
+	for(i = 0; i < numPs; i++)
+		points[i]  = qPoints[numPs-1 - i];
+		
+	//Calculate weights (first component of normalized eVect ^2 times first moment of W)
+	for(i = 0; i < numPs; i++) 
+		weights[i] = m_0*eigenVectors[0][numPs-1 - i]*eigenVectors[0][numPs-1 - i];
+		
+	//Delete matrices when done using them 
+	vtkDeleteMatrix(A);
+	delete [] qPoints; 
+	vtkDeleteMatrix(eigenVectors);
+}
+
+//This function finds the quadrature points and weights for 
+//Gauss-Hermite quadrature
+//Interval [-inf,inf]
+//Weight function: e^{-x^2}
+void vtkfemriNSDQuadrature::Initialize1DHermite()
+{
+  if (this->QuadraturePoints)
+  {
+    this->QuadraturePoints->Delete();
+    this->QuadraturePoints = NULL;
+  }
+  this->QuadraturePoints = vtkDoubleArray::New();
+ 
+  if (this->QuadratureWeights)
+  {
+    this->QuadratureWeights->Delete();
+    this->QuadratureWeights = NULL;
+  }
+  this->QuadratureWeights = vtkDoubleArray::New();
+ 
+	//alexmbcm: added Golub's method to get an arbitary number of gauss points
+	if (this->Order == 0 || this->Order ==1)
+	{
+        this->QuadraturePoints ->SetNumberOfTuples(1);
+		this->QuadratureWeights->SetNumberOfTuples(1);
+		double* points  = this->QuadraturePoints->GetPointer(0);
+		double* weights = this->QuadratureWeights->GetPointer(0);
+		points[0]  = 0.0;
+		weights[0] = 1.772453850905516027298167483341;
+		return;
+	}
+	
+	int numPs;  //Number of points
+	int i;      //Variable used for for loops
+	//Zeroth moment of weight function 
+	//(just the integral of the weight function on quad interval) 
+	double m_0 = 1.772453850905516027298167483341; 
+	double lengthSquared; //Variable used to calculate weight
+  
+    //Calculate max number of points needed based on max quad order 
+	//needed
+	if(this->Order % 2 == 0)
+		numPs = (this->Order + 2)/2;
+	else
+		numPs = (this->Order + 1)/2;
+	
+	this->QuadraturePoints ->SetNumberOfTuples(numPs);
+	this->QuadratureWeights->SetNumberOfTuples(numPs);
+	
+	//Fill points and weights using the Golub–Welsch algorithm
+	double* points = this->QuadraturePoints->GetPointer(0);
+	double* weights = this->QuadratureWeights->GetPointer(0);
+    
+	//Make 0 matrix to apply Golub-Welsch algorithm
+	//using the JacobiN function in vtkMath.h
+	//Using inline functions above current function declaration
+	double **A = vtkNewMatrix(numPs,numPs);
+	vtkZeroMatrix(A,numPs,numPs);
+		
+	//Include in A the square root of 2 term recurrence coefficients
+	//In the lower and upper diagonals
+	for(i = 0; i < (numPs - 1); i++) 
+		A[i+1][i] = A[i][i+1] = sqrt((i+1.0) / 2.0);
 		
 	//Find points using JacobiN function
 	double *qPoints       = new double[numPs];
@@ -675,7 +765,7 @@ void vtkfemriNSDQuadrature::TensorProduct(vtkfemriNSDQuadrature* quadRule1, vtkf
       point[0] = quadRule1->GetQuadraturePoint(j)[0];
       point[1] = quadRule2->GetQuadraturePoint(i)[0];
 
-      weight = quadRule1->GetQuadratureWeight(i) * quadRule2->GetQuadratureWeight(j);
+      weight = quadRule1->GetQuadratureWeight(j) * quadRule2->GetQuadratureWeight(i);
       
       this->QuadraturePoints->SetTuple(id,point);
       this->QuadratureWeights->SetValue(id,weight);

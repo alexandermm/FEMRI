@@ -30,7 +30,8 @@
 //Constants used in Initialize() function
 #define GAUSS_LEGENDRE     0 
 #define GAUSS_LAGUERRE     1
-#define GAUSS_HALF_HERMITE 2 
+#define GAUSS_HERMITE      2
+#define GAUSS_HALF_HERMITE 3 
 
 
 class VTK_FEMRI_NUMERIC_EXPORT vtkfemriNSDQuadrature : public vtkObject
@@ -74,6 +75,7 @@ protected:
 
   void Initialize1DLegendre();
   void Initialize1DLaguerre();
+  void Initialize1DHermite();
   void Initialize1DHalfHermite();
   void ScaleTo01();
 

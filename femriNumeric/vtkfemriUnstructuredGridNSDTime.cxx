@@ -32,7 +32,8 @@
 //alexmbcm
 #include <ctime>  //For timing algorithm
 #include <cfloat> //For definition of double type epsilon 
-
+//#include <iostream>
+//using namespace std;
 
 vtkStandardNewMacro(vtkfemriUnstructuredGridNSDTime);
 vtkCxxRevisionMacro(vtkfemriUnstructuredGridNSDTime, "$Revision: 1.13 $");
@@ -113,10 +114,10 @@ void vtkfemriUnstructuredGridNSDTime::Initialize()
     this->gaussQuadrature->Initialize(VTK_QUADRATIC_TRIANGLE);
 }
 
-/*inline double fx(double xi, double eta)
+inline double fx(double xi, double eta)
 {
-	return 8.0*xi*xi + 5.0*eta*eta + 1.0*xi*eta + 0.7*xi - 0.4*eta + 0.1;
-}*/	
+	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
+}	
 	
 //Evaluate fourier transform at given k space values
 void vtkfemriUnstructuredGridNSDTime::EvaluateFourierFunction(double frequency[3], 
@@ -125,6 +126,7 @@ double value[2], ofstream& writer)
   //Get information for all vtk cells (elements)
   vtkUnstructuredGrid* input = vtkUnstructuredGrid::SafeDownCast(this->GetInput());
   
+ 	  
   //Complex signal real and imaginary values at the given kspace value
   value[0] = 0.0;
   value[1] = 0.0;
@@ -134,6 +136,7 @@ double value[2], ofstream& writer)
   int numberOfCells = input->GetNumberOfCells();
   
   int i;
+  //cout << endl << " Changing k-space value: " << endl;
   for (i=0; i<numberOfCells; i++)
     {
 	
@@ -175,37 +178,39 @@ double value[2], ofstream& writer)
 		ys[q] = p[1];
 		zs[q] = p[2];
 	}
-    
+	
+			
 	double twoPi = 2.0 * vtkMath::Pi();
 
 	double ga[6];
-	ga[0] = -twoPi*((2*xs[0]-4*xs[5]+2*xs[2])*frequency[0] + 
-					(2*ys[0]-4*ys[5]+2*ys[2])*frequency[1] + 
-					(2*zs[0]-4*zs[5]+2*zs[2])*frequency[2]);
-					
-	ga[1] = -twoPi*((2*xs[0]-4*xs[3]+2*xs[1])*frequency[0] + 
+	ga[0] = -twoPi*((2*xs[0]-4*xs[3]+2*xs[1])*frequency[0] + 
 	                (2*ys[0]-4*ys[3]+2*ys[1])*frequency[1] + 
 					(2*zs[0]-4*zs[3]+2*zs[1])*frequency[2]);
+					
+	ga[1] = -twoPi*((2*xs[0]-4*xs[5]+2*xs[2])*frequency[0] + 
+					(2*ys[0]-4*ys[5]+2*ys[2])*frequency[1] + 
+					(2*zs[0]-4*zs[5]+2*zs[2])*frequency[2]);				
 					
 	ga[2] = -twoPi*((4*xs[0]-4*xs[3]+4*xs[4]-4*xs[5])*frequency[0] +
 	                (4*ys[0]-4*ys[3]+4*ys[4]-4*ys[5])*frequency[1] +
 					(4*zs[0]-4*zs[3]+4*zs[4]-4*zs[5])*frequency[2]);
-					
-	ga[3] = -twoPi*((4*xs[5]-3*xs[0]-xs[2])*frequency[0] +
+	
+	ga[3] = -twoPi*((4*xs[3]-3*xs[0]-xs[1])*frequency[0] +
+	                (4*ys[3]-3*ys[0]-ys[1])*frequency[1] +
+					(4*zs[3]-3*zs[0]-zs[1])*frequency[2]);				
+													
+	ga[4] = -twoPi*((4*xs[5]-3*xs[0]-xs[2])*frequency[0] +
 	                (4*ys[5]-3*ys[0]-ys[2])*frequency[1] +
 					(4*zs[5]-3*zs[0]-zs[2])*frequency[2]);
 					
-	ga[4] = -twoPi*((4*xs[3]-3*xs[0]-xs[1])*frequency[0] +
-	                (4*ys[3]-3*ys[0]-ys[1])*frequency[1] +
-					(4*zs[3]-3*zs[0]-zs[1])*frequency[2]);
-					
 	ga[5] = -twoPi*(xs[0]*frequency[0] + ys[0]*frequency[1] + zs[0]*frequency[2]);
 
-	
-	
+    //cout << " ga values: " << endl << setprecision(16) << 
+	//ga[0]<<" "<<ga[1]<<" "<<ga[2]<<" "<<ga[3]<<" "<<ga[4]<<" "<<ga[5]<<" "<< endl;
+			
 	//Decompose integral
 	bool nsdSuccess = 0;
-	if (frequency[0] == 0.0 && frequency[1] == 0.0 && frequency[2] == 0.0)
+	if ((frequency[0] == 0.0) && (frequency[1] == 0.0) && (frequency[2] == 0.0))
 	{
 		nsdSuccess = 0;
 	}
@@ -214,10 +219,12 @@ double value[2], ofstream& writer)
 		nsdSuccess = decompNSD(cell, cellValue, ga, a,b, numberOfCellPoints, frequency);
 	}
 	
+	//cout << " NSD signal: " << setprecision(16) << cellValue[0] << " " << cellValue[1] << endl;
+	
 	//IF NSD CANT DO IT USE SIMEDREA METHOD
 	if (nsdSuccess == 0)
 	{
-		double twoPi = 2.0*vtkMath::Pi();
+		double twoPi = 2.0 * vtkMath::Pi();
 		int subId = 0;
 		double localQuadPoint[2], globalQuadPoint[3];
 		double quadratureWeight;
@@ -235,14 +242,14 @@ double value[2], ofstream& writer)
 			this->gaussQuadrature->GetQuadraturePoint(q,localQuadPoint);
 			quadratureWeight = this->gaussQuadrature->GetQuadratureWeight(q);
 	  
-			//cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
-			//double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
+			cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
+			double kdotx = vtkMath::Dot(globalQuadPoint,frequency);
 			
-			//cellValue[0] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
-			//cellValue[1] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
+			cellValue[0] += quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * cos(twoPi * kdotx);
+			cellValue[1] -= quadratureWeight * fx(localQuadPoint[0], localQuadPoint[1]) * sin(twoPi * kdotx);
 
 				
-			//Calculate globalQuadPoint (the quadrature point in global coordinates)
+			/*//Calculate globalQuadPoint (the quadrature point in global coordinates)
 			cell->EvaluateLocation(subId,localQuadPoint,globalQuadPoint,weights);
 	  
 			//Calculate normal at local quadrature point
@@ -289,24 +296,23 @@ double value[2], ofstream& writer)
 				this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * sin(twoPi * kdotx);
 				cellValue[1] += 
 				this->MagnetizationValue * jacobian * quadratureWeight * kdotn / twoPik2 * cos(twoPi * kdotx);
-			}
+			}*/
 		}
-
 	}
 
 	//Get time
     double theTime = (double) (clock() - startTime) / CLOCKS_PER_SEC * 1000.0;
 	
-	int numberOfQuadraturePoints = this->qLab->GetNumberOfQuadraturePoints();
+	int numberOfQuadPoints = this->qLab->GetNumberOfQuadraturePoints();
 	
 	//Record values for each element (cell)
 	if (nsdSuccess)
 		{ 
-		writer << setprecision(16) << "1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << setprecision(16) << "1  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadPoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	else
 		{
-		writer << "0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadraturePoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
+		writer << "0  " << frequency[0] << " " << frequency[1] << " " << frequency[2] << "  " << i << "  " << numberOfQuadPoints << "  " << theTime << "  " << cellValue[0] << " " << cellValue[1] << endl;
 		}
 	
 	
@@ -520,8 +526,9 @@ inline comp computeComplexJacobian(comp xi, comp eta, vtkCell* cell)
 
 inline comp fx(comp xi, comp eta, vtkCell* cell, double* frequency)
 {
-	//return 8.0*xi*xi + 5.0*eta*eta + 1.0*xi*eta + 0.7*xi - 0.4*eta + 0.1;
-	//Compute k dot normal
+	return 8.03*xi*xi + 5.08*eta*eta + 1.42*xi*eta + 0.78*xi - 0.47*eta + 0.19;
+	
+	/*//Compute k dot normal
 	int numberOfCellPoints = cell->GetNumberOfPoints();
 	
 	comp derivs[12];
@@ -567,7 +574,7 @@ inline comp fx(comp xi, comp eta, vtkCell* cell, double* frequency)
 	(frequency[0]*frequency[0]+frequency[1]*frequency[1]+frequency[2]*frequency[2]);
 
 
-	return computeComplexJacobian(xi, eta, cell) * kdotn * comp(0.0,1.0) / twoPik2;
+	return computeComplexJacobian(xi, eta, cell) * kdotn * comp(0.0,1.0) / twoPik2;*/
 }
 
 inline comp gx(comp x, comp y, double* ga)
