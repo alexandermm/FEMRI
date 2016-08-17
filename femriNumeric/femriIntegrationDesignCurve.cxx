@@ -23,7 +23,7 @@
 // .SECTION Description
 // ..
 // .SECTION Thanks
-// This class was developed by Paul Simedrea\n
+// This class was developed by Paul Simedrea\n    
 // Imaging Research Labs - Robarts Research Institute \n
 // email: simedrea@imaging.robarts.ca - homepage: http://www.imaging.robarts.ca/~simedrea
 
